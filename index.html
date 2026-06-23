@@ -1,0 +1,424 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="color-scheme" content="light">
+<title>Meanies Anonymous — A Fellowship of the Forgetful</title>
+<style>
+  :root{
+    color-scheme:only light;
+    --packet:#3f6f1f;        /* pickled-onion packet green */
+    --packet-deep:#2c4f14;   /* darker green for bands */
+    --ink:#16233f;           /* dark-blue packet writing */
+    --paper:#f1f2e6;         /* faintly green-tinted paper */
+    --paper-line:#dcdfc8;
+    --tang:#a8245f;          /* pickled-onion magenta accent */
+    --tang-soft:#f3d9e4;
+  }
+  *{box-sizing:border-box;}
+  html{scroll-behavior:smooth;background:var(--paper);}
+  @media (prefers-reduced-motion:reduce){html{scroll-behavior:auto;} *{animation:none!important;transition:none!important;}}
+  body{
+    margin:0;
+    background:var(--paper);
+    color:var(--ink);
+    font-family:Georgia,"Times New Roman",serif;
+    font-size:1.125rem;
+    line-height:1.6;
+  }
+  main{background:var(--paper);}
+  .skip{
+    position:absolute;left:-999px;top:0;
+    background:var(--ink);color:#fff;padding:.6rem 1rem;z-index:10;
+  }
+  .skip:focus{left:.5rem;top:.5rem;}
+  a{color:var(--tang);}
+  a:focus-visible,button:focus-visible{
+    outline:3px solid var(--tang);
+    outline-offset:3px;
+  }
+  .wrap{max-width:48rem;margin:0 auto;padding:0 1.25rem;}
+
+  /* Images */
+  img{display:block;max-width:100%;height:auto;}
+  .hero-img{width:100%;border-bottom:6px solid var(--ink);}
+  figure{margin:0 0 1.5rem;}
+  figure img{width:100%;border-radius:10px;}
+  figcaption{font-size:.82rem;font-style:italic;opacity:.7;margin-top:.5rem;}
+  .medallion{max-width:16rem;margin:1.5rem auto 0;}
+  .medallion img{border-radius:50%;}
+
+  /* Header */
+  header{
+    background:var(--packet);
+    color:var(--paper);
+    border-bottom:6px solid var(--ink);
+    padding:3rem 0 2.5rem;
+  }
+  .eyebrow{
+    font-family:"Arial Narrow",Arial,sans-serif;
+    text-transform:uppercase;
+    letter-spacing:.35em;
+    font-size:.8rem;
+    font-weight:700;
+    margin:0 0 .75rem;
+    color:var(--paper);
+  }
+  h1{
+    font-family:"Arial Black","Arial Narrow",Arial,sans-serif;
+    font-weight:900;
+    font-size:clamp(2.4rem,9vw,4.2rem);
+    line-height:.95;
+    letter-spacing:-.01em;
+    margin:0 0 .5rem;
+    text-transform:uppercase;
+  }
+  header p.lede{
+    margin:.5rem 0 0;
+    font-style:italic;
+    font-size:1.2rem;
+    max-width:32rem;
+  }
+  .demon{font-style:normal;}
+
+  /* Sections */
+  main section{padding:2.75rem 0;border-bottom:1px solid var(--paper-line);}
+  h2{
+    font-family:"Arial Black",Arial,sans-serif;
+    font-weight:900;
+    text-transform:uppercase;
+    letter-spacing:.02em;
+    font-size:clamp(1.4rem,5vw,2rem);
+    margin:0 0 1rem;
+    color:var(--packet-deep);
+  }
+  p{margin:0 0 1rem;}
+
+  /* Twelve steps */
+  ol.steps{
+    list-style:none;
+    counter-reset:step;
+    margin:0;padding:0;
+  }
+  ol.steps li{
+    counter-increment:step;
+    position:relative;
+    padding:.9rem 0 .9rem 3.4rem;
+    border-top:1px solid var(--paper-line);
+  }
+  ol.steps li::before{
+    content:counter(step);
+    position:absolute;left:0;top:.9rem;
+    width:2.4rem;height:2.4rem;
+    background:var(--ink);color:var(--paper);
+    font-family:"Arial Black",Arial,sans-serif;
+    display:flex;align-items:center;justify-content:center;
+    border-radius:50%;
+    font-size:1rem;
+  }
+
+  /* Streak counter — the signature */
+  .streak{
+    background:var(--ink);
+    color:var(--paper);
+    border-radius:14px;
+    padding:2rem 1.5rem;
+    text-align:center;
+  }
+  .streak .count{
+    font-family:"Arial Black",Arial,sans-serif;
+    font-size:clamp(3.5rem,16vw,6rem);
+    line-height:1;
+    color:#9fd35a;
+    display:block;
+  }
+  .streak .count-label{
+    font-family:"Arial Narrow",Arial,sans-serif;
+    text-transform:uppercase;
+    letter-spacing:.25em;
+    font-size:.85rem;
+    display:block;
+    margin-top:.4rem;
+  }
+  .streak button{
+    margin-top:1.5rem;
+    background:var(--tang);
+    color:#fff;
+    border:none;
+    font-family:"Arial Black",Arial,sans-serif;
+    text-transform:uppercase;
+    letter-spacing:.05em;
+    font-size:1rem;
+    padding:.85rem 1.5rem;
+    border-radius:8px;
+    cursor:pointer;
+  }
+  .streak button:hover{background:#8a1c4e;}
+  .streak .relapse{
+    margin:1rem 0 0;
+    min-height:1.5rem;
+    font-style:italic;
+  }
+
+  /* Testimonials */
+  blockquote{
+    margin:0 0 1.5rem;
+    padding:1rem 1.25rem;
+    background:#fff;
+    border-left:5px solid var(--tang);
+  }
+  blockquote p{margin:0 0 .5rem;}
+  blockquote cite{font-style:normal;font-weight:700;font-size:.95rem;}
+
+  dl.meetings{margin:0;}
+  dl.meetings div{
+    display:flex;justify-content:space-between;gap:1rem;
+    padding:.6rem 0;border-top:1px solid var(--paper-line);
+  }
+  dl.meetings dt{font-weight:700;}
+  dl.meetings dd{margin:0;text-align:right;font-style:italic;}
+
+  /* Footer */
+  footer{background:var(--packet-deep);color:var(--paper);padding:2.5rem 0;}
+  footer h2{color:var(--paper);}
+  .resupply{
+    display:inline-block;
+    background:#9fd35a;color:var(--ink);
+    font-family:"Arial Black",Arial,sans-serif;
+    text-transform:uppercase;letter-spacing:.03em;
+    text-decoration:none;
+    padding:.85rem 1.4rem;border-radius:8px;
+    margin:.5rem 0 1.25rem;
+  }
+  .resupply:hover{background:#b6e07c;}
+  footer .small{font-size:.9rem;font-style:italic;opacity:.85;margin:0;}
+
+  /* Nav */
+  .nav{
+    position:sticky;top:0;z-index:5;
+    background:var(--paper);
+    border-bottom:2px solid var(--ink);
+  }
+  .nav .wrap{
+    display:flex;align-items:center;justify-content:space-between;
+    gap:1rem;flex-wrap:wrap;
+    padding-top:.6rem;padding-bottom:.6rem;
+  }
+  .brand{
+    font-family:"Arial Black",Arial,sans-serif;
+    font-weight:900;text-transform:uppercase;letter-spacing:.04em;
+    color:var(--packet-deep);text-decoration:none;font-size:1.05rem;
+  }
+  .nav ul{list-style:none;display:flex;gap:1.25rem;margin:0;padding:0;flex-wrap:wrap;}
+  .navlink{
+    font-family:"Arial Narrow",Arial,sans-serif;
+    text-transform:uppercase;letter-spacing:.12em;
+    font-size:.78rem;font-weight:700;
+    color:var(--ink);text-decoration:none;
+  }
+  .navlink:hover{color:var(--tang);}
+
+  /* Helpline bar */
+  .helpline{
+    background:var(--ink);color:var(--paper);
+    text-align:center;
+    font-family:"Arial Narrow",Arial,sans-serif;
+    letter-spacing:.03em;font-size:.95rem;
+    padding:.55rem 1rem;
+  }
+  .helpline a{color:#9fd35a;font-weight:700;text-decoration:none;}
+  .helpline a:hover{text-decoration:underline;}
+
+  /* Footer scaffolding */
+  .emergency{padding-bottom:2rem;border-bottom:1px solid rgba(241,242,230,.2);}
+  .footcols{
+    display:flex;flex-wrap:wrap;gap:2rem;
+    padding:2rem 0 1.5rem;
+  }
+  .footcol{flex:1 1 12rem;}
+  .footcol h3{
+    font-family:"Arial Narrow",Arial,sans-serif;
+    text-transform:uppercase;letter-spacing:.18em;
+    font-size:.8rem;margin:0 0 .6rem;color:#9fd35a;
+  }
+  .footcol p{font-size:.95rem;margin:0 0 .75rem;}
+  .footcol a{color:var(--paper);text-decoration:none;}
+  .footcol a:hover{text-decoration:underline;}
+  .foot-bottom{
+    border-top:1px solid rgba(241,242,230,.2);
+    padding-top:1.25rem;font-size:.85rem;
+  }
+  .foot-bottom p{margin:0 0 .6rem;}
+</style>
+</head>
+<body>
+<a class="skip" href="#main">Skip to main content</a>
+
+<nav class="nav" aria-label="Main">
+  <div class="wrap">
+    <a class="brand" href="#top">Meanies&nbsp;Anonymous</a>
+    <ul>
+      <li><a class="navlink" href="#admit">About</a></li>
+      <li><a class="navlink" href="#steps">The Steps</a></li>
+      <li><a class="navlink" href="#meet">Meetings</a></li>
+      <li><a class="navlink" href="#contact">Helpline</a></li>
+    </ul>
+  </div>
+</nav>
+
+<div class="helpline">
+  Need to talk? The Craving Line is open 24 hours: <a href="tel:1800632637">1800 META&shy;NIE (1800 632 637)</a>
+</div>
+
+<header id="top">
+  <div class="wrap">
+    <p class="eyebrow">A fellowship of the forgetful</p>
+    <h1>Meanies<br>Anonymous</h1>
+    <p class="lede">You came home with the milk, the bread, and the good intentions. You did not come home with the Meanies. <span class="demon">Again.</span> We can help.</p>
+  </div>
+</header>
+
+<img class="hero-img" src="img-hero.png" alt="A person sits alone at a kitchen table at sunset, head buried in both hands, beside an open green crisp packet and a mug of tea.">
+
+<main id="main">
+  <div class="wrap">
+
+    <section aria-labelledby="admit">
+      <h2 id="admit">You are not alone</h2>
+      <figure>
+        <img src="img-circle.png" alt="Six adults of different ages sit in a circle on folding chairs in a community hall, holding paper cups of tea. One is mid-sentence; a green crisp packet rests on the floor by a chair.">
+        <figcaption>A Tuesday evening group. Names withheld. Bags acknowledged.</figcaption>
+      </figure>
+      <p>Somewhere tonight, a green packet sits on a shop shelf, unbought. Somewhere, a person stands at a press, certain they had a bag, finding only crumbs and regret. That person is you. That person is all of us.</p>
+      <p>Meanies Anonymous is a free, anonymous fellowship for anyone whose relationship with pickled-onion corn snacks has become unmanageable — whether you forget them, hoard them, or finish the family bag standing over the bin so nobody saw.</p>
+    </section>
+
+    <section aria-labelledby="steps">
+      <h2 id="steps">The Twelve Steps</h2>
+      <ol class="steps">
+        <li>We admitted we were powerless over Meanies — that our presses had become empty.</li>
+        <li>Came to believe a bigger bag could restore us to crunch.</li>
+        <li>Made a decision to add them to the list, in writing, before leaving the house.</li>
+        <li>Made a searching and fearless inventory of the snack drawer.</li>
+        <li>Admitted to ourselves and to one other person the exact number of bags consumed in the car.</li>
+        <li>Were entirely ready to share. (We were not ready to share.)</li>
+        <li>Humbly accepted that they are, in fact, demon-shaped.</li>
+        <li>Made a list of all persons whose Meanies we had eaten.</li>
+        <li>Made direct amends, except where doing so would mean giving the bag back.</li>
+        <li>Continued to take personal inventory, and when the bag was empty, promptly admitted it.</li>
+        <li>Sought through reminders and lists to improve our memory at the shop.</li>
+        <li>Having had a crunchy awakening, we carried this message to others, and bought them a bag too.</li>
+      </ol>
+    </section>
+
+    <section aria-labelledby="streak-h">
+      <h2 id="streak-h">Your streak</h2>
+      <p>Track the days since you last let yourself down at the till. Be honest. The counter knows.</p>
+      <figure class="medallion">
+        <img src="img-medallion.jpeg" alt="A small bronze recovery medallion resting on dark wood, engraved with a grinning winged demon figure in place of a number.">
+        <figcaption>The one-bag chip, awarded for restraint not yet demonstrated.</figcaption>
+      </figure>
+      <div class="streak">
+        <span class="count" id="count">7</span>
+        <span class="count-label">days you remembered the Meanies</span>
+        <button type="button" id="relapse-btn">I forgot them again</button>
+        <p class="relapse" id="relapse" role="status" aria-live="polite"></p>
+      </div>
+    </section>
+
+    <section aria-labelledby="voices">
+      <h2 id="voices">Voices from the fellowship</h2>
+      <figure>
+        <img src="img-testimonial.png" alt="An older woman in a green cardigan sits at a table by a rain-streaked window, holding a mug of tea, looking quietly hopeful out over a green Irish landscape.">
+        <figcaption>Bridie, eight months remembered.</figcaption>
+      </figure>
+      <blockquote>
+        <p>"I told myself one bag. It is never one bag. It has never once been one bag."</p>
+        <cite>— Bridie M.</cite>
+      </blockquote>
+      <blockquote>
+        <p>"My family thinks I keep them for guests. We do not have guests. I have a system."</p>
+        <cite>— Pat K.</cite>
+      </blockquote>
+      <blockquote>
+        <p>"Day one, all over again. But I'm here. That has to count for something."</p>
+        <cite>— Anonymous, after a big shop</cite>
+      </blockquote>
+    </section>
+
+    <section aria-labelledby="meet">
+      <h2 id="meet">Meetings</h2>
+      <figure>
+        <img src="img-meeting.jpeg" alt="A community hall under fluorescent lights: a stack of plastic chairs beside a folding table holding a metal tea urn and a glass bowl filled with green crisp packets.">
+        <figcaption>The hall is open. The urn is on. The bowl is, for now, full.</figcaption>
+      </figure>
+      <p>Drop in. No commitment, no judgement, bring your own bag (and one to share).</p>
+      <dl class="meetings">
+        <div><dt>Mondays</dt><dd>After the big shop, by the bins</dd></div>
+        <div><dt>Wednesdays</dt><dd>Half-eight, the good press</dd></div>
+        <div><dt>Fridays</dt><dd>Whenever the craving hits</dd></div>
+      </dl>
+    </section>
+
+  </div>
+</main>
+
+<footer id="contact">
+  <div class="wrap">
+    <div class="emergency">
+      <h2>In case of emergency</h2>
+      <p>Relapse is part of recovery. If you have forgotten the Meanies and cannot face another empty press, resupply is one tap away.</p>
+      <a class="resupply" href="https://taytocrisps.ie/product_listing/tayto-meanies/" target="_blank" rel="noopener">Order emergency supplies</a>
+    </div>
+
+    <div class="footcols">
+      <div class="footcol">
+        <h3>Get in touch</h3>
+        <p>The Craving Line<br><a href="tel:1800632637">1800 632 637</a></p>
+        <p><a href="mailto:hello@meaniesanonymous.ie">hello@meaniesanonymous.ie</a></p>
+      </div>
+      <div class="footcol">
+        <h3>The fellowship</h3>
+        <p><a href="#admit">About us</a><br>
+        <a href="#steps">The Twelve Steps</a><br>
+        <a href="#meet">Find a meeting</a><br>
+        <a href="#voices">Member stories</a></p>
+      </div>
+      <div class="footcol">
+        <h3>Find us</h3>
+        <p>Sligo, Ireland<br>(by the bins, mostly)</p>
+        <p><a href="#top">Facebook</a> · <a href="#top">Mastodon</a></p>
+      </div>
+    </div>
+
+    <div class="foot-bottom">
+      <p>© <span id="year"></span> Meanies Anonymous. A registered fellowship of the forgetful. Charity No. CHY&nbsp;35792.</p>
+      <p class="small">Meanies Anonymous is a parody and is not affiliated with, endorsed by, or in any recovery programme with Tayto. No actual onions were pickled in the making of this site.</p>
+    </div>
+  </div>
+</footer>
+
+<script>
+  (function(){
+    var count = 7;
+    var el = document.getElementById('count');
+    var msg = document.getElementById('relapse');
+    var btn = document.getElementById('relapse-btn');
+    var lines = [
+      "Streak reset. It happens to the best of us.",
+      "Back to day zero. The fellowship still loves you.",
+      "It's not a failure, it's a re-shop. Begin again.",
+      "Honesty is the first step. Day zero it is."
+    ];
+    btn.addEventListener('click', function(){
+      count = 0;
+      el.textContent = count;
+      msg.textContent = lines[Math.floor(Math.random()*lines.length)];
+    });
+    var y = document.getElementById('year');
+    if (y) y.textContent = new Date().getFullYear();
+  })();
+</script>
+</body>
+</html>
