@@ -320,7 +320,7 @@
         <figcaption>The one-bag chip, awarded for restraint not yet demonstrated.</figcaption>
       </figure>
       <div class="streak">
-        <span class="count" id="count">7</span>
+        <span class="count" id="count" aria-label="7 days remembered">7</span>
         <span class="count-label">days you remembered the Meanies</span>
         <button type="button" id="relapse-btn">I forgot them again</button>
         <p class="relapse" id="relapse" role="status" aria-live="polite"></p>
@@ -414,6 +414,7 @@
     btn.addEventListener('click', function(){
       count = 0;
       el.textContent = count;
+      el.setAttribute('aria-label', count + ' days remembered');
       msg.textContent = lines[Math.floor(Math.random()*lines.length)];
     });
     var y = document.getElementById('year');
