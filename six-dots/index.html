@@ -1,0 +1,676 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Six Dots — Braille Lookup</title>
+<style>
+  :root {
+    --bg: #000000;
+    --fg: #ffffff;
+    --dim: #b8b8b8;
+    --dot-size: 1.35rem;
+    --dot-gap: 0.55rem;
+  }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0;
+    background: var(--bg);
+    color: var(--fg);
+    font-family: system-ui, -apple-system, "Segoe UI", sans-serif;
+    line-height: 1.6;
+    font-size: 1.15rem;
+    padding: 1.5rem;
+  }
+  main { max-width: 40rem; margin: 0 auto; }
+
+  /* Logo: braille cell beside the title */
+  .masthead {
+    display: flex;
+    align-items: center;
+    gap: 1.25rem;
+    margin: 0.5rem 0 0.25rem;
+  }
+  .logo {
+    display: grid;
+    grid-template-columns: repeat(2, 0.95rem);
+    grid-template-rows: repeat(3, 0.95rem);
+    gap: 0.4rem;
+    flex-shrink: 0;
+  }
+  .logo span {
+    width: 0.95rem; height: 0.95rem;
+    border-radius: 50%;
+    background: var(--fg);
+  }
+
+  h1 {
+    font-size: 2.2rem;
+    font-weight: 900;
+    letter-spacing: -0.02em;
+    margin: 0;
+  }
+  h2 {
+    font-size: 1.35rem;
+    font-weight: 800;
+    margin: 2.25rem 0 0.75rem;
+    border-top: 2px solid var(--fg);
+    padding-top: 1rem;
+  }
+  p.intro { margin-top: 0; color: var(--dim); font-size: 1.05rem; max-width: 34rem; }
+
+  form {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.75rem;
+    margin: 1.5rem 0 0;
+    align-items: end;
+  }
+  .field { display: flex; flex-direction: column; flex: 1 1 16rem; }
+  label { font-size: 1rem; font-weight: 700; margin-bottom: 0.4rem; }
+  input[type="text"] {
+    font-size: 1.35rem;
+    padding: 0.75rem 0.85rem;
+    background: var(--bg);
+    color: var(--fg);
+    border: 3px solid var(--fg);
+    border-radius: 0;
+    font-family: inherit;
+    min-height: 3.25rem;
+  }
+  input[type="text"]:focus { outline: 3px solid var(--fg); outline-offset: 3px; }
+  input::placeholder { color: var(--dim); }
+  button {
+    font-family: inherit;
+    font-size: 1.15rem;
+    font-weight: 800;
+    padding: 0.75rem 1.5rem;
+    min-height: 3.25rem;
+    background: var(--fg);
+    color: var(--bg);
+    border: 3px solid var(--fg);
+    border-radius: 0;
+    cursor: pointer;
+  }
+  button:hover { background: var(--bg); color: var(--fg); }
+  button:focus { outline: 3px solid var(--fg); outline-offset: 3px; }
+  @media (max-width: 540px) {
+    form button { width: 100%; }
+  }
+
+  /* Results */
+  #results-list { list-style: none; margin: 0; padding: 0; }
+  #results-list > li {
+    border: 2px solid var(--fg);
+    padding: 1rem 1.25rem 1.25rem;
+    margin-bottom: 1.25rem;
+  }
+  .result-title {
+    font-size: 1.3rem;
+    font-weight: 800;
+    display: block;
+    margin-bottom: 0.75rem;
+  }
+  .cells {
+    list-style: none;
+    margin: 0;
+    padding: 0;
+    display: flex;
+    flex-wrap: wrap;
+    gap: 1.25rem 1.75rem;
+  }
+  .cells > li {
+    display: flex;
+    align-items: center;
+    gap: 0.85rem;
+  }
+  .cell-grid {
+    display: grid;
+    grid-template-columns: repeat(2, var(--dot-size));
+    grid-template-rows: repeat(3, var(--dot-size));
+    gap: var(--dot-gap);
+    flex-shrink: 0;
+  }
+  .cell-grid span {
+    width: var(--dot-size);
+    height: var(--dot-size);
+    border-radius: 50%;
+    border: 2px solid var(--fg);
+  }
+  .cell-grid span.on { background: var(--fg); }
+  .cell-grid span.off { border-color: var(--dim); opacity: 0.45; }
+  .cell-text { font-size: 1.1rem; }
+  .note { display: block; margin-top: 0.9rem; color: var(--dim); font-size: 1rem; }
+  .empty { color: var(--dim); }
+  .count { font-weight: 700; margin: 0 0 1rem; }
+
+  details { margin-top: 1rem; }
+  summary {
+    cursor: pointer;
+    font-weight: 800;
+    font-size: 1.15rem;
+    padding: 0.5rem 0;
+  }
+  summary:focus-visible { outline: 3px solid var(--fg); outline-offset: 3px; }
+  .browse-list {
+    list-style: none;
+    padding: 0;
+    margin: 1rem 0 0;
+    font-size: 1.05rem;
+  }
+  .browse-list li {
+    padding: 0.5rem 0;
+    border-bottom: 1px solid #333;
+  }
+
+  .visually-hidden {
+    position: absolute;
+    width: 1px; height: 1px;
+    margin: -1px; padding: 0;
+    overflow: hidden;
+    clip: rect(0 0 0 0);
+    white-space: nowrap;
+    border: 0;
+  }
+
+  @media (prefers-reduced-motion: no-preference) {
+    button { transition: background 0.15s, color 0.15s; }
+  }
+</style>
+</head>
+<body>
+<main>
+  <div class="masthead">
+    <div class="logo" aria-hidden="true">
+      <span></span><span></span><span></span><span></span><span></span><span></span>
+    </div>
+    <h1>Six Dots</h1>
+  </div>
+  <p class="intro">Braille dot lookup. Type a letter, number, punctuation name, word, or contraction — "b", "7", "comma", "the", "because", "hello". Covers Grade 1 and UEB Grade 2. Words with no contraction are spelled out cell by cell.</p>
+
+  <form id="lookup-form">
+    <div class="field">
+      <label for="query">Letter, word, or contraction</label>
+      <input type="text" id="query" name="query" autocomplete="off" placeholder="e.g. because">
+    </div>
+    <button type="submit">Find dots</button>
+  </form>
+
+  <div id="announcer" class="visually-hidden" aria-live="polite"></div>
+
+  <section aria-labelledby="results-heading">
+    <h2 id="results-heading">Results</h2>
+    <p class="count" id="count"></p>
+    <p class="empty" id="placeholder">Results appear here after you search.</p>
+    <ul id="results-list"></ul>
+  </section>
+
+  <section aria-labelledby="g2-heading">
+    <h2 id="g2-heading">Browse contractions and shortforms</h2>
+    <details>
+      <summary>Show the full Grade 2 list</summary>
+      <ul class="browse-list" id="browse-list"></ul>
+    </details>
+  </section>
+
+  <section aria-labelledby="basics-heading">
+    <h2 id="basics-heading">Browse alphabet, numbers, and punctuation</h2>
+    <details>
+      <summary>Show the Grade 1 basics</summary>
+      <ul class="browse-list" id="basics-list"></ul>
+    </details>
+  </section>
+</main>
+
+<script>
+"use strict";
+
+// ---------------------------------------------------------------
+// Grade 1 building blocks
+// ---------------------------------------------------------------
+
+const LETTERS = {
+  a:[1], b:[1,2], c:[1,4], d:[1,4,5], e:[1,5], f:[1,2,4], g:[1,2,4,5],
+  h:[1,2,5], i:[2,4], j:[2,4,5], k:[1,3], l:[1,2,3], m:[1,3,4],
+  n:[1,3,4,5], o:[1,3,5], p:[1,2,3,4], q:[1,2,3,4,5], r:[1,2,3,5],
+  s:[2,3,4], t:[2,3,4,5], u:[1,3,6], v:[1,2,3,6], w:[2,4,5,6],
+  x:[1,3,4,6], y:[1,3,4,5,6], z:[1,3,5,6]
+};
+
+const NUMBER_SIGN = [3,4,5,6];
+const CAPITAL_SIGN = [6];
+
+const DIGIT_LETTER = { "1":"a","2":"b","3":"c","4":"d","5":"e","6":"f","7":"g","8":"h","9":"i","0":"j" };
+
+const SIGNS = {
+  ch:[[1,6]], sh:[[1,4,6]], th:[[1,4,5,6]], wh:[[1,5,6]], ou:[[1,2,5,6]],
+  st:[[3,4]], er:[[1,2,4,5,6]], ar:[[3,4,5]], ing:[[3,4,6]], ed:[[1,2,4,6]],
+  gh:[[1,2,6]], ow:[[2,4,6]], con:[[2,5]], dis:[[2,5,6]], en:[[2,6]], in:[[3,5]],
+  the:[[2,3,4,6]], and:[[1,2,3,4,6]], forSign:[[1,2,3,4,5,6]], of:[[1,2,3,5,6]],
+  with:[[2,3,4,5,6]], one:[[5],[1,3,5]]
+};
+for (const [letter, dots] of Object.entries(LETTERS)) SIGNS[letter] = [dots];
+
+// ---------------------------------------------------------------
+// Punctuation and indicators (UEB)
+// ---------------------------------------------------------------
+
+const PUNCTUATION = [
+  {term:"comma", aliases:[","], label:"Comma", cells:[[2]]},
+  {term:"period", aliases:[".","full stop","fullstop"], label:"Period / full stop", cells:[[2,5,6]]},
+  {term:"question mark", aliases:["?","question"], label:"Question mark", cells:[[2,3,6]]},
+  {term:"exclamation mark", aliases:["!","exclamation"], label:"Exclamation mark", cells:[[2,3,5]]},
+  {term:"apostrophe", aliases:["'"], label:"Apostrophe", cells:[[3]]},
+  {term:"colon", aliases:[":"], label:"Colon", cells:[[2,5]]},
+  {term:"semicolon", aliases:[";"], label:"Semicolon", cells:[[2,3]]},
+  {term:"hyphen", aliases:["-","dash"], label:"Hyphen", cells:[[3,6]]},
+  {term:"opening quote", aliases:["open quote","quote"], label:"Opening quotation mark (non-specific)", cells:[[2,3,6]], note:"Same cell as the question mark; position tells them apart."},
+  {term:"closing quote", aliases:["close quote"], label:"Closing quotation mark (non-specific)", cells:[[3,5,6]]},
+  {term:"opening parenthesis", aliases:["(","open bracket","opening bracket"], label:"Opening round parenthesis", cells:[[5],[1,2,6]]},
+  {term:"closing parenthesis", aliases:[")","close bracket","closing bracket"], label:"Closing round parenthesis", cells:[[5],[3,4,5]]},
+  {term:"capital indicator", aliases:["capital sign","capital","cap"], label:"Capital letter indicator", cells:[[6]], note:"Placed before a letter. Doubled (dot 6, dot 6) before a fully capitalised word."},
+  {term:"number sign", aliases:["number indicator","numeric indicator","#"], label:"Numeric indicator", cells:[[3,4,5,6]], note:"Placed before digits. Digits use the letters a to j."},
+  {term:"grade 1 indicator", aliases:["letter sign","grade one indicator"], label:"Grade 1 (letter) indicator", cells:[[5,6]], note:"Shows the next cell is a plain letter, not a contraction."}
+];
+
+// ---------------------------------------------------------------
+// Grade 2 contractions
+// ---------------------------------------------------------------
+
+const CONTRACTIONS = [
+  {term:"but", label:"B — but", cells:[[1,2]]},
+  {term:"can", label:"C — can", cells:[[1,4]]},
+  {term:"do", label:"D — do", cells:[[1,4,5]]},
+  {term:"every", label:"E — every", cells:[[1,5]]},
+  {term:"from", label:"F — from", cells:[[1,2,4]]},
+  {term:"go", label:"G — go", cells:[[1,2,4,5]]},
+  {term:"have", label:"H — have", cells:[[1,2,5]]},
+  {term:"just", label:"J — just", cells:[[2,4,5]]},
+  {term:"knowledge", label:"K — knowledge", cells:[[1,3]]},
+  {term:"like", label:"L — like", cells:[[1,2,3]]},
+  {term:"more", label:"M — more", cells:[[1,3,4]]},
+  {term:"not", label:"N — not", cells:[[1,3,4,5]]},
+  {term:"people", label:"P — people", cells:[[1,2,3,4]]},
+  {term:"quite", label:"Q — quite", cells:[[1,2,3,4,5]]},
+  {term:"rather", label:"R — rather", cells:[[1,2,3,5]]},
+  {term:"so", label:"S — so", cells:[[2,3,4]]},
+  {term:"that", label:"T — that", cells:[[2,3,4,5]]},
+  {term:"us", label:"U — us", cells:[[1,3,6]]},
+  {term:"very", label:"V — very", cells:[[1,2,3,6]]},
+  {term:"will", label:"W — will", cells:[[2,4,5,6]]},
+  {term:"it", label:"X — it", cells:[[1,3,4,6]]},
+  {term:"you", label:"Y — you", cells:[[1,3,4,5,6]]},
+  {term:"as", label:"Z — as", cells:[[1,3,5,6]]},
+
+  {term:"and", label:"and (wordsign and groupsign)", cells:[[1,2,3,4,6]]},
+  {term:"for", label:"for (wordsign and groupsign)", cells:[[1,2,3,4,5,6]]},
+  {term:"of", label:"of (wordsign and groupsign)", cells:[[1,2,3,5,6]]},
+  {term:"the", label:"the (wordsign and groupsign)", cells:[[2,3,4,6]]},
+  {term:"with", label:"with (wordsign and groupsign)", cells:[[2,3,4,5,6]]},
+  {term:"child", label:"child (whole word only)", cells:[[1,6]]},
+  {term:"shall", label:"shall (whole word only)", cells:[[1,4,6]]},
+  {term:"this", label:"this (whole word only)", cells:[[1,4,5,6]]},
+  {term:"which", label:"which (whole word only)", cells:[[1,5,6]]},
+  {term:"out", label:"out (whole word only)", cells:[[1,2,5,6]]},
+  {term:"still", label:"still (whole word only)", cells:[[3,4]]},
+  {term:"ch", label:"ch (groupsign, also stands for child)", cells:[[1,6]]},
+  {term:"gh", label:"gh (groupsign)", cells:[[1,2,6]]},
+  {term:"sh", label:"sh (groupsign, also stands for shall)", cells:[[1,4,6]]},
+  {term:"th", label:"th (groupsign, also stands for this)", cells:[[1,4,5,6]]},
+  {term:"wh", label:"wh (groupsign, also stands for which)", cells:[[1,5,6]]},
+  {term:"ed", label:"ed (groupsign)", cells:[[1,2,4,6]]},
+  {term:"er", label:"er (groupsign)", cells:[[1,2,4,5,6]]},
+  {term:"ou", label:"ou (groupsign, also stands for out)", cells:[[1,2,5,6]]},
+  {term:"ow", label:"ow (groupsign)", cells:[[2,4,6]]},
+  {term:"ar", label:"ar (groupsign)", cells:[[3,4,5]]},
+  {term:"st", label:"st (groupsign, also stands for still)", cells:[[3,4]]},
+  {term:"ing", label:"ing (groupsign, never at the start of a word)", cells:[[3,4,6]]},
+
+  {term:"be", label:"be (lower wordsign and groupsign)", cells:[[2,3]]},
+  {term:"his", label:"his (lower wordsign)", cells:[[2,3,6]]},
+  {term:"was", label:"was (lower wordsign)", cells:[[3,5,6]]},
+  {term:"were", label:"were (lower wordsign)", cells:[[2,3,5,6]]},
+  {term:"enough", label:"enough (lower wordsign)", cells:[[2,6]]},
+  {term:"in", label:"in (lower wordsign and groupsign)", cells:[[3,5]]},
+  {term:"ea", label:"ea (lower groupsign, middle of word only)", cells:[[2]]},
+  {term:"bb", label:"bb (lower groupsign, middle of word only)", cells:[[2,3]]},
+  {term:"cc", label:"cc (lower groupsign, middle of word only)", cells:[[2,5]]},
+  {term:"ff", label:"ff (lower groupsign, middle of word only)", cells:[[2,3,5]]},
+  {term:"gg", label:"gg (lower groupsign, middle of word only)", cells:[[2,3,5,6]]},
+  {term:"con", label:"con (lower groupsign)", cells:[[2,5]]},
+  {term:"dis", label:"dis (lower groupsign)", cells:[[2,5,6]]},
+  {term:"en", label:"en (lower groupsign)", cells:[[2,6]]},
+
+  {term:"character", label:"character — dot 5, then ch", cells:[[5],[1,6]]},
+  {term:"day", label:"day — dot 5, then d", cells:[[5],[1,4,5]]},
+  {term:"ever", label:"ever — dot 5, then e", cells:[[5],[1,5]]},
+  {term:"father", label:"father — dot 5, then f", cells:[[5],[1,2,4]]},
+  {term:"here", label:"here — dot 5, then h", cells:[[5],[1,2,5]]},
+  {term:"know", label:"know — dot 5, then k", cells:[[5],[1,3]]},
+  {term:"lord", label:"lord — dot 5, then l", cells:[[5],[1,2,3]]},
+  {term:"mother", label:"mother — dot 5, then m", cells:[[5],[1,3,4]]},
+  {term:"name", label:"name — dot 5, then n", cells:[[5],[1,3,4,5]]},
+  {term:"one", label:"one — dot 5, then o", cells:[[5],[1,3,5]]},
+  {term:"ought", label:"ought — dot 5, then ou", cells:[[5],[1,2,5,6]]},
+  {term:"part", label:"part — dot 5, then p", cells:[[5],[1,2,3,4]]},
+  {term:"question", label:"question — dot 5, then q", cells:[[5],[1,2,3,4,5]]},
+  {term:"right", label:"right — dot 5, then r", cells:[[5],[1,2,3,5]]},
+  {term:"some", label:"some — dot 5, then s", cells:[[5],[2,3,4]]},
+  {term:"there", label:"there — dot 5, then the", cells:[[5],[2,3,4,6]]},
+  {term:"through", label:"through — dot 5, then th", cells:[[5],[1,4,5,6]]},
+  {term:"time", label:"time — dot 5, then t", cells:[[5],[2,3,4,5]]},
+  {term:"under", label:"under — dot 5, then u", cells:[[5],[1,3,6]]},
+  {term:"where", label:"where — dot 5, then wh", cells:[[5],[1,5,6]]},
+  {term:"work", label:"work — dot 5, then w", cells:[[5],[2,4,5,6]]},
+  {term:"young", label:"young — dot 5, then y", cells:[[5],[1,3,4,5,6]]},
+
+  {term:"these", label:"these — dots 4,5, then the", cells:[[4,5],[2,3,4,6]]},
+  {term:"those", label:"those — dots 4,5, then th", cells:[[4,5],[1,4,5,6]]},
+  {term:"upon", label:"upon — dots 4,5, then u", cells:[[4,5],[1,3,6]]},
+  {term:"whose", label:"whose — dots 4,5, then wh", cells:[[4,5],[1,5,6]]},
+  {term:"word", label:"word — dots 4,5, then w", cells:[[4,5],[2,4,5,6]]},
+
+  {term:"cannot", label:"cannot — dots 4,5,6, then c", cells:[[4,5,6],[1,4]]},
+  {term:"had", label:"had — dots 4,5,6, then h", cells:[[4,5,6],[1,2,5]]},
+  {term:"many", label:"many — dots 4,5,6, then m", cells:[[4,5,6],[1,3,4]]},
+  {term:"spirit", label:"spirit — dots 4,5,6, then s", cells:[[4,5,6],[2,3,4]]},
+  {term:"their", label:"their — dots 4,5,6, then the", cells:[[4,5,6],[2,3,4,6]]},
+  {term:"world", label:"world — dots 4,5,6, then w", cells:[[4,5,6],[2,4,5,6]]},
+
+  {term:"ence", label:"-ence — dots 5,6, then e", cells:[[5,6],[1,5]]},
+  {term:"ful", label:"-ful — dots 5,6, then l", cells:[[5,6],[1,2,3]]},
+  {term:"ity", label:"-ity — dots 5,6, then y", cells:[[5,6],[1,3,4,5,6]]},
+  {term:"ment", label:"-ment — dots 5,6, then t", cells:[[5,6],[2,3,4,5]]},
+  {term:"ness", label:"-ness — dots 5,6, then s", cells:[[5,6],[2,3,4]]},
+  {term:"ong", label:"-ong — dots 5,6, then g", cells:[[5,6],[1,2,4,5]]},
+  {term:"tion", label:"-tion — dots 5,6, then n", cells:[[5,6],[1,3,4,5]]},
+
+  {term:"ance", label:"-ance — dots 4,6, then e", cells:[[4,6],[1,5]]},
+  {term:"less", label:"-less — dots 4,6, then s", cells:[[4,6],[2,3,4]]},
+  {term:"ound", label:"-ound — dots 4,6, then d", cells:[[4,6],[1,4,5]]},
+  {term:"ount", label:"-ount — dots 4,6, then t", cells:[[4,6],[2,3,4,5]]},
+  {term:"sion", label:"-sion — dots 4,6, then n", cells:[[4,6],[1,3,4,5]]}
+];
+
+// ---------------------------------------------------------------
+// UEB shortforms
+// ---------------------------------------------------------------
+
+const SHORTFORM_DEFS = [
+  ["about", ["a","b"]], ["above", ["a","b","v"]], ["according", ["a","c"]],
+  ["across", ["a","c","r"]], ["after", ["a","f"]], ["afternoon", ["a","f","n"]],
+  ["afterward", ["a","f","w"]], ["again", ["a","g"]], ["against", ["a","g","st"]],
+  ["almost", ["a","l","m"]], ["already", ["a","l","r"]], ["also", ["a","l"]],
+  ["although", ["a","l","th"]], ["altogether", ["a","l","t"]], ["always", ["a","l","w"]],
+  ["because", ["b","e","c"]], ["before", ["b","e","f"]], ["behind", ["b","e","h"]],
+  ["below", ["b","e","l"]], ["beneath", ["b","e","n"]], ["beside", ["b","e","s"]],
+  ["between", ["b","e","t"]], ["beyond", ["b","e","y"]], ["blind", ["b","l"]],
+  ["braille", ["b","r","l"]], ["children", ["ch","n"]],
+  ["conceive", ["con","c","v"]], ["conceiving", ["con","c","v","g"]],
+  ["could", ["c","d"]], ["deceive", ["d","c","v"]], ["deceiving", ["d","c","v","g"]],
+  ["declare", ["d","c","l"]], ["declaring", ["d","c","l","g"]],
+  ["either", ["e","i"]], ["first", ["f","st"]], ["friend", ["f","r"]],
+  ["good", ["g","d"]], ["great", ["g","r","t"]], ["herself", ["h","er","f"]],
+  ["him", ["h","m"]], ["himself", ["h","m","f"]], ["immediate", ["i","m","m"]],
+  ["its", ["x","s"]], ["itself", ["x","f"]], ["letter", ["l","r"]],
+  ["little", ["l","l"]], ["much", ["m","ch"]], ["must", ["m","st"]],
+  ["myself", ["m","y","f"]], ["necessary", ["n","e","c"]], ["neither", ["n","e","i"]],
+  ["oneself", ["one","f"]], ["ourselves", ["ou","r","v","s"]], ["paid", ["p","d"]],
+  ["perceive", ["p","er","c","v"]], ["perceiving", ["p","er","c","v","g"]],
+  ["perhaps", ["p","er","h"]], ["quick", ["q","k"]],
+  ["receive", ["r","c","v"]], ["receiving", ["r","c","v","g"]],
+  ["rejoice", ["r","j","c"]], ["rejoicing", ["r","j","c","g"]],
+  ["said", ["s","d"]], ["should", ["sh","d"]], ["such", ["s","ch"]],
+  ["themselves", ["the","m","v","s"]], ["thyself", ["th","y","f"]],
+  ["today", ["t","d"]], ["together", ["t","g","r"]], ["tomorrow", ["t","m"]],
+  ["tonight", ["t","n"]], ["would", ["w","d"]], ["your", ["y","r"]],
+  ["yourself", ["y","r","f"]], ["yourselves", ["y","r","v","s"]]
+];
+
+function signDisplayName(name) {
+  return name === "forSign" ? "for" : name;
+}
+
+const SHORTFORMS = SHORTFORM_DEFS.map(([word, signs]) => {
+  const cells = [];
+  const cellLabels = [];
+  signs.forEach(name => {
+    const signCells = SIGNS[name];
+    signCells.forEach((cell, i) => {
+      cells.push(cell);
+      cellLabels.push(signCells.length > 1
+        ? signDisplayName(name) + " (cell " + (i + 1) + " of " + signCells.length + ")"
+        : signDisplayName(name));
+    });
+  });
+  return {
+    term: word,
+    label: word + " (shortform) — written " + signs.map(signDisplayName).join(", "),
+    cells: cells,
+    cellLabels: cellLabels
+  };
+});
+
+const GRADE2 = CONTRACTIONS.concat(SHORTFORMS);
+
+// ---------------------------------------------------------------
+// Formatting helpers
+// ---------------------------------------------------------------
+
+function dotsText(cell) {
+  return "dot" + (cell.length > 1 ? "s " : " ") + cell.join(", ");
+}
+
+// A result cell: { dots: [..], text: "spoken description" }
+function entryToCells(entry) {
+  const single = entry.cells.length === 1;
+  return entry.cells.map((cell, i) => ({
+    dots: cell,
+    text: entry.cellLabels
+      ? entry.cellLabels[i] + " — " + dotsText(cell)
+      : (single ? dotsText(cell) : "Cell " + (i + 1) + " — " + dotsText(cell))
+  }));
+}
+
+// ---------------------------------------------------------------
+// Lookup layers
+// ---------------------------------------------------------------
+
+function lookupLetter(ch) {
+  const dots = LETTERS[ch];
+  if (!dots) return null;
+  const wordsign = CONTRACTIONS.find(d => d.label.startsWith(ch.toUpperCase() + " — "));
+  let note = "";
+  if (wordsign) {
+    note = "Standing alone in Grade 2, " + ch.toUpperCase() + " means “" + wordsign.term + "”.";
+  } else if (ch === "a" || ch === "i" || ch === "o") {
+    note = "No wordsign meaning — “" + ch + "” is already a word.";
+  }
+  return {
+    title: "Letter " + ch.toUpperCase(),
+    cells: [{ dots: dots, text: dotsText(dots) }],
+    note: note
+  };
+}
+
+function lookupNumber(numStr) {
+  const cells = [{ dots: NUMBER_SIGN, text: "Numeric indicator — " + dotsText(NUMBER_SIGN) }];
+  for (const digit of numStr) {
+    const letter = DIGIT_LETTER[digit];
+    cells.push({ dots: LETTERS[letter], text: digit + " is the letter " + letter + " — " + dotsText(LETTERS[letter]) });
+  }
+  return { title: "Number " + numStr, cells: cells, note: "" };
+}
+
+function spellOut(word, capitalised) {
+  const cells = [];
+  if (capitalised) {
+    cells.push({ dots: CAPITAL_SIGN, text: "Capital indicator — dot 6" });
+  }
+  for (const ch of word) {
+    if (!LETTERS[ch]) return null;
+    cells.push({ dots: LETTERS[ch], text: ch + " — " + dotsText(LETTERS[ch]) });
+  }
+  return {
+    title: (capitalised ? word.charAt(0).toUpperCase() + word.slice(1) : word) + " — spelled letter by letter",
+    cells: cells,
+    note: "No Grade 2 contraction covers this whole word, so this is the uncontracted (Grade 1) spelling. In Grade 2 text, groupsigns inside the word may shorten it further."
+  };
+}
+
+// ---------------------------------------------------------------
+// Search
+// ---------------------------------------------------------------
+
+function search(rawQuery) {
+  const trimmed = rawQuery.trim();
+  if (!trimmed) return [];
+  const capitalised = /^[A-Z]/.test(trimmed);
+  const q = trimmed.toLowerCase();
+  const results = [];
+
+  if (q.length === 1 && LETTERS[q]) {
+    results.push(lookupLetter(q));
+    return results;
+  }
+
+  if (/^[0-9]+$/.test(q)) {
+    results.push(lookupNumber(q));
+    return results;
+  }
+
+  const punct = PUNCTUATION.filter(p => p.term === q || p.aliases.includes(q));
+  punct.forEach(p => results.push({ title: p.label, cells: entryToCells(p), note: p.note || "" }));
+  if (results.length) return results;
+
+  const exact = GRADE2.filter(d => d.term === q);
+  exact.forEach(m => results.push({ title: m.label, cells: entryToCells(m), note: "" }));
+  if (results.length) return results;
+
+  if (/^[a-z]+$/.test(q)) {
+    const spelled = spellOut(q, capitalised);
+    if (spelled) results.push(spelled);
+    const near = GRADE2.filter(d => d.term.startsWith(q)).slice(0, 3);
+    near.forEach(m => results.push({ title: m.label, cells: entryToCells(m), note: "" }));
+    return results;
+  }
+
+  const partial = GRADE2.filter(d => d.term.startsWith(q)).slice(0, 10);
+  partial.forEach(m => results.push({ title: m.label, cells: entryToCells(m), note: "" }));
+  return results;
+}
+
+// ---------------------------------------------------------------
+// Rendering
+// ---------------------------------------------------------------
+
+// Visual six-dot grid, hidden from VoiceOver (the text carries the info)
+function buildGrid(dots) {
+  const grid = document.createElement("span");
+  grid.className = "cell-grid";
+  grid.setAttribute("aria-hidden", "true");
+  // Visual order left-to-right, top-to-bottom: 1 4 / 2 5 / 3 6
+  [1, 4, 2, 5, 3, 6].forEach(n => {
+    const dot = document.createElement("span");
+    dot.className = dots.includes(n) ? "on" : "off";
+    grid.appendChild(dot);
+  });
+  return grid;
+}
+
+function renderResults(results, queryText) {
+  const list = document.getElementById("results-list");
+  const count = document.getElementById("count");
+  const placeholder = document.getElementById("placeholder");
+  const announcer = document.getElementById("announcer");
+  list.innerHTML = "";
+  placeholder.hidden = true;
+
+  if (results.length === 0) {
+    count.textContent = "No match found for “" + queryText + "”. Try a letter, a number, a word, or a punctuation name like “comma”.";
+    announcer.textContent = "No match found for " + queryText + ".";
+    return;
+  }
+
+  count.textContent = results.length === 1
+    ? "1 result for “" + queryText + "”."
+    : results.length + " results for “" + queryText + "”.";
+
+  results.forEach(r => {
+    const li = document.createElement("li");
+    const title = document.createElement("span");
+    title.className = "result-title";
+    title.textContent = r.title;
+    li.appendChild(title);
+
+    const cellsList = document.createElement("ol");
+    cellsList.className = "cells";
+    r.cells.forEach(c => {
+      const cellLi = document.createElement("li");
+      cellLi.appendChild(buildGrid(c.dots));
+      const text = document.createElement("span");
+      text.className = "cell-text";
+      text.textContent = c.text;
+      cellLi.appendChild(text);
+      cellsList.appendChild(cellLi);
+    });
+    li.appendChild(cellsList);
+
+    if (r.note) {
+      const note = document.createElement("span");
+      note.className = "note";
+      note.textContent = r.note;
+      li.appendChild(note);
+    }
+    list.appendChild(li);
+  });
+
+  // Short announcement; full detail lives in the navigable list below
+  const first = results[0];
+  announcer.textContent = count.textContent + " First result: " + first.title + ". Swipe to the Results heading to explore.";
+}
+
+document.getElementById("lookup-form").addEventListener("submit", function (e) {
+  e.preventDefault();
+  const input = document.getElementById("query");
+  const query = input.value;
+  renderResults(search(query), query.trim());
+  // Keep focus in the field with text selected for a fast next lookup
+  input.focus();
+  input.select();
+});
+
+// ---------------------------------------------------------------
+// Browse lists
+// ---------------------------------------------------------------
+
+function formatCellsPlain(cells) {
+  return cells.map(dotsText).join("; then ");
+}
+
+const browseList = document.getElementById("browse-list");
+[...GRADE2].sort((a, b) => a.term.localeCompare(b.term)).forEach(d => {
+  const li = document.createElement("li");
+  li.textContent = d.label + " — " + formatCellsPlain(d.cells);
+  browseList.appendChild(li);
+});
+
+const basicsList = document.getElementById("basics-list");
+for (const [letter, dots] of Object.entries(LETTERS)) {
+  const li = document.createElement("li");
+  li.textContent = letter.toUpperCase() + " — " + dotsText(dots);
+  basicsList.appendChild(li);
+}
+for (const digit of ["1","2","3","4","5","6","7","8","9","0"]) {
+  const li = document.createElement("li");
+  li.textContent = digit + " — numeric indicator, then letter " + DIGIT_LETTER[digit] + " (" + dotsText(LETTERS[DIGIT_LETTER[digit]]) + ")";
+  basicsList.appendChild(li);
+}
+PUNCTUATION.forEach(p => {
+  const li = document.createElement("li");
+  li.textContent = p.label + " — " + formatCellsPlain(p.cells);
+  basicsList.appendChild(li);
+});
+</script>
+</body>
+</html>
