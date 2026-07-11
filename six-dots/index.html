@@ -205,18 +205,14 @@
     <ul id="results-list"></ul>
   </section>
 
-  <section aria-labelledby="g2-heading">
-    <h2 id="g2-heading">Browse contractions and shortforms</h2>
+  <section aria-labelledby="browse-heading">
+    <h2 id="browse-heading">Browse the full reference</h2>
     <details>
-      <summary>Show the full Grade 2 list</summary>
+      <summary>Contractions and shortforms (Grade 2)</summary>
       <ul class="browse-list" id="browse-list"></ul>
     </details>
-  </section>
-
-  <section aria-labelledby="basics-heading">
-    <h2 id="basics-heading">Browse alphabet, numbers, and punctuation</h2>
     <details>
-      <summary>Show the Grade 1 basics</summary>
+      <summary>Alphabet, numbers, and punctuation (Grade 1)</summary>
       <ul class="browse-list" id="basics-list"></ul>
     </details>
   </section>
@@ -598,10 +594,24 @@ function renderResults(results, queryText) {
 
   results.forEach(r => {
     const li = document.createElement("li");
+
+    // One spoken chunk per result: VoiceOver reads the whole entry — title,
+    // dots, and note — in a single swipe instead of stopping on each part.
+    const spoken = document.createElement("span");
+    spoken.className = "visually-hidden";
+    let spokenText = r.title + ". " + r.cells.map(c => c.text).join(", then ") + ".";
+    if (r.note) spokenText += " " + r.note;
+    spoken.textContent = spokenText;
+    li.appendChild(spoken);
+
+    // Visual presentation, hidden from screen readers (the chunk above carries it).
+    const visual = document.createElement("div");
+    visual.setAttribute("aria-hidden", "true");
+
     const title = document.createElement("span");
     title.className = "result-title";
     title.textContent = r.title;
-    li.appendChild(title);
+    visual.appendChild(title);
 
     const cellsList = document.createElement("ol");
     cellsList.className = "cells";
@@ -614,14 +624,16 @@ function renderResults(results, queryText) {
       cellLi.appendChild(text);
       cellsList.appendChild(cellLi);
     });
-    li.appendChild(cellsList);
+    visual.appendChild(cellsList);
 
     if (r.note) {
       const note = document.createElement("span");
       note.className = "note";
       note.textContent = r.note;
-      li.appendChild(note);
+      visual.appendChild(note);
     }
+
+    li.appendChild(visual);
     list.appendChild(li);
   });
 
