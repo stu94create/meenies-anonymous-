@@ -99,8 +99,9 @@
   }
 
   /* Results */
-  #results-list { list-style: none; margin: 0; padding: 0; }
-  #results-list > li {
+  #results-list, .related-list { list-style: none; margin: 0; padding: 0; }
+  .related-list { margin-top: 1rem; }
+  #results-list > li, .related-list > li {
     border: 2px solid var(--fg);
     padding: 1rem 1.25rem 1.25rem;
     margin-bottom: 1.25rem;
@@ -203,6 +204,7 @@
     <p class="count" id="count"></p>
     <p class="empty" id="placeholder">Results appear here after you search.</p>
     <ul id="results-list"></ul>
+    <div id="related"></div>
   </section>
 
   <section aria-labelledby="browse-heading">
@@ -518,42 +520,50 @@ function spellOut(word, capitalised) {
 // Search
 // ---------------------------------------------------------------
 
+function grade2Result(m) {
+  return { title: m.label, cells: entryToCells(m), note: "" };
+}
+
+// Returns { results, related }: `results` is the direct answer, `related` is
+// an optional set of near-match contractions tucked into a disclosure so they
+// don't add screen-reader stops to the main answer.
 function search(rawQuery) {
   const trimmed = rawQuery.trim();
-  if (!trimmed) return [];
+  if (!trimmed) return { results: [], related: [] };
   const capitalised = /^[A-Z]/.test(trimmed);
   const q = trimmed.toLowerCase();
-  const results = [];
 
   if (q.length === 1 && LETTERS[q]) {
-    results.push(lookupLetter(q));
-    return results;
+    return { results: [lookupLetter(q)], related: [] };
   }
 
   if (/^[0-9]+$/.test(q)) {
-    results.push(lookupNumber(q));
-    return results;
+    return { results: [lookupNumber(q)], related: [] };
   }
 
   const punct = PUNCTUATION.filter(p => p.term === q || p.aliases.includes(q));
-  punct.forEach(p => results.push({ title: p.label, cells: entryToCells(p), note: p.note || "" }));
-  if (results.length) return results;
-
-  const exact = GRADE2.filter(d => d.term === q);
-  exact.forEach(m => results.push({ title: m.label, cells: entryToCells(m), note: "" }));
-  if (results.length) return results;
-
-  if (/^[a-z]+$/.test(q)) {
-    const spelled = spellOut(q, capitalised);
-    if (spelled) results.push(spelled);
-    const near = GRADE2.filter(d => d.term.startsWith(q)).slice(0, 3);
-    near.forEach(m => results.push({ title: m.label, cells: entryToCells(m), note: "" }));
-    return results;
+  if (punct.length) {
+    return {
+      results: punct.map(p => ({ title: p.label, cells: entryToCells(p), note: p.note || "" })),
+      related: []
+    };
   }
 
-  const partial = GRADE2.filter(d => d.term.startsWith(q)).slice(0, 10);
-  partial.forEach(m => results.push({ title: m.label, cells: entryToCells(m), note: "" }));
-  return results;
+  const exact = GRADE2.filter(d => d.term === q);
+  if (exact.length) {
+    return { results: exact.map(grade2Result), related: [] };
+  }
+
+  if (/^[a-z]+$/.test(q)) {
+    const results = [];
+    const spelled = spellOut(q, capitalised);
+    if (spelled) results.push(spelled);
+    const related = GRADE2.filter(d => d.term.startsWith(q)).slice(0, 3).map(grade2Result);
+    return { results: results, related: related };
+  }
+
+  const partial = GRADE2.filter(d => d.term.startsWith(q)).slice(0, 10).map(grade2Result);
+  return { results: partial, related: [] };
 }
 
 // ---------------------------------------------------------------
@@ -574,12 +584,60 @@ function buildGrid(dots) {
   return grid;
 }
 
-function renderResults(results, queryText) {
+// One result as a single screen-reader stop: a hidden spoken chunk (title,
+// dots, note) plus the visual dot cells, which are hidden from AT.
+function buildResultLi(r) {
+  const li = document.createElement("li");
+
+  const spoken = document.createElement("span");
+  spoken.className = "visually-hidden";
+  let spokenText = r.title + ". " + r.cells.map(c => c.text).join(", then ") + ".";
+  if (r.note) spokenText += " " + r.note;
+  spoken.textContent = spokenText;
+  li.appendChild(spoken);
+
+  const visual = document.createElement("div");
+  visual.setAttribute("aria-hidden", "true");
+
+  const title = document.createElement("span");
+  title.className = "result-title";
+  title.textContent = r.title;
+  visual.appendChild(title);
+
+  const cellsList = document.createElement("ol");
+  cellsList.className = "cells";
+  r.cells.forEach(c => {
+    const cellLi = document.createElement("li");
+    cellLi.appendChild(buildGrid(c.dots));
+    const text = document.createElement("span");
+    text.className = "cell-text";
+    text.textContent = c.text;
+    cellLi.appendChild(text);
+    cellsList.appendChild(cellLi);
+  });
+  visual.appendChild(cellsList);
+
+  if (r.note) {
+    const note = document.createElement("span");
+    note.className = "note";
+    note.textContent = r.note;
+    visual.appendChild(note);
+  }
+
+  li.appendChild(visual);
+  return li;
+}
+
+function renderResults(found, queryText) {
+  const results = found.results;
+  const related = found.related;
   const list = document.getElementById("results-list");
   const count = document.getElementById("count");
   const placeholder = document.getElementById("placeholder");
   const announcer = document.getElementById("announcer");
+  const relatedBox = document.getElementById("related");
   list.innerHTML = "";
+  relatedBox.innerHTML = "";
   placeholder.hidden = true;
 
   if (results.length === 0) {
@@ -592,59 +650,32 @@ function renderResults(results, queryText) {
     ? "1 result for “" + queryText + "”."
     : results.length + " results for “" + queryText + "”.";
 
-  results.forEach(r => {
-    const li = document.createElement("li");
+  results.forEach(r => list.appendChild(buildResultLi(r)));
 
-    // One spoken chunk per result: VoiceOver reads the whole entry — title,
-    // dots, and note — in a single swipe instead of stopping on each part.
-    const spoken = document.createElement("span");
-    spoken.className = "visually-hidden";
-    let spokenText = r.title + ". " + r.cells.map(c => c.text).join(", then ") + ".";
-    if (r.note) spokenText += " " + r.note;
-    spoken.textContent = spokenText;
-    li.appendChild(spoken);
-
-    // Visual presentation, hidden from screen readers (the chunk above carries it).
-    const visual = document.createElement("div");
-    visual.setAttribute("aria-hidden", "true");
-
-    const title = document.createElement("span");
-    title.className = "result-title";
-    title.textContent = r.title;
-    visual.appendChild(title);
-
-    const cellsList = document.createElement("ol");
-    cellsList.className = "cells";
-    r.cells.forEach(c => {
-      const cellLi = document.createElement("li");
-      cellLi.appendChild(buildGrid(c.dots));
-      const text = document.createElement("span");
-      text.className = "cell-text";
-      text.textContent = c.text;
-      cellLi.appendChild(text);
-      cellsList.appendChild(cellLi);
-    });
-    visual.appendChild(cellsList);
-
-    if (r.note) {
-      const note = document.createElement("span");
-      note.className = "note";
-      note.textContent = r.note;
-      visual.appendChild(note);
-    }
-
-    li.appendChild(visual);
-    list.appendChild(li);
-  });
+  // Near-match contractions live in a collapsed disclosure so they don't add
+  // stops to the direct answer. Only built when there are any.
+  if (related.length) {
+    const details = document.createElement("details");
+    const summary = document.createElement("summary");
+    summary.textContent = "Related contractions (" + related.length + ")";
+    details.appendChild(summary);
+    const ul = document.createElement("ul");
+    ul.className = "related-list";
+    related.forEach(r => ul.appendChild(buildResultLi(r)));
+    details.appendChild(ul);
+    relatedBox.appendChild(details);
+  }
 
   // Lead with the answer: title, then the dots, spoken straight away.
-  // Any extra detail lives in the navigable list below.
   const first = results[0];
   const spokenDots = first.cells.map(c => c.text).join(", then ");
   let announcement = first.title + ". " + spokenDots + ".";
   if (results.length > 1) {
     const more = results.length - 1;
     announcement += " " + more + " more result" + (more === 1 ? "" : "s") + " below.";
+  }
+  if (related.length) {
+    announcement += " " + related.length + " related contraction" + (related.length === 1 ? "" : "s") + " in a list below.";
   }
   announcer.textContent = announcement;
 }
