@@ -625,9 +625,16 @@ function renderResults(results, queryText) {
     list.appendChild(li);
   });
 
-  // Short announcement; full detail lives in the navigable list below
+  // Lead with the answer: title, then the dots, spoken straight away.
+  // Any extra detail lives in the navigable list below.
   const first = results[0];
-  announcer.textContent = count.textContent + " First result: " + first.title + ". Swipe to the Results heading to explore.";
+  const spokenDots = first.cells.map(c => c.text).join(", then ");
+  let announcement = first.title + ". " + spokenDots + ".";
+  if (results.length > 1) {
+    const more = results.length - 1;
+    announcement += " " + more + " more result" + (more === 1 ? "" : "s") + " below.";
+  }
+  announcer.textContent = announcement;
 }
 
 document.getElementById("lookup-form").addEventListener("submit", function (e) {
